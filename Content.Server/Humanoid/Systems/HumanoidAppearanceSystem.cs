@@ -127,9 +127,19 @@ public sealed partial class HumanoidAppearanceSystem : SharedHumanoidAppearanceS
             return;
         }
 
-        for (var i = 0; i < markings[index].MarkingColors.Count && i < colors.Count; i++)
+        var marking = markings[index];
+
+        // Ensure the marking has enough color slots for hair/facial hair dual-color blending
+        if ((category == MarkingCategories.Hair || category == MarkingCategories.FacialHair)
+            && marking.MarkingColors.Count < colors.Count)
         {
-            markings[index].SetColor(i, colors[i]);
+            marking.EnsureColorCount(colors.Count);
+        }
+
+        // Set all the colors
+        for (var i = 0; i < marking.MarkingColors.Count && i < colors.Count; i++)
+        {
+            marking.SetColor(i, colors[i]);
         }
 
         Dirty(uid, humanoid);

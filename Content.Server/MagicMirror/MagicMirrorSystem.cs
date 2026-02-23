@@ -288,9 +288,8 @@ public sealed class MagicMirrorSystem : SharedMagicMirrorSystem
 
         _humanoid.SetMarkingColor(component.Target.Value, category, args.Slot, args.Colors);
 
-        // using this makes the UI feel like total ass
-        // que
-        // UpdateInterface(uid, component.Target, message.Session);
+        // Update the UI state to reflect the color change on all connected clients
+        UpdateInterface(uid, component.Target.Value, component);
     }
 
     private void OnTryMagicMirrorRemoveSlot(EntityUid uid, MagicMirrorComponent component, MagicMirrorRemoveSlotMessage message)

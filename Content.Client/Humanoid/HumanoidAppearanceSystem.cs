@@ -218,14 +218,20 @@ public sealed class HumanoidAppearanceSystem : SharedHumanoidAppearanceSystem
         var hairColor = _markingManager.MustMatchSkin(profile.Species, HumanoidVisualLayers.Hair, out var hairAlpha, _prototypeManager)
             ? profile.Appearance.SkinColor.WithAlpha(hairAlpha)
             : profile.Appearance.HairColor;
+        var secondaryHairColor = _markingManager.MustMatchSkin(profile.Species, HumanoidVisualLayers.Hair, out _, _prototypeManager)
+            ? profile.Appearance.SkinColor.WithAlpha(hairAlpha)
+            : profile.Appearance.SecondaryHairColor;
         var hair = new Marking(profile.Appearance.HairStyleId,
-            new[] { hairColor });
+            new[] { hairColor, secondaryHairColor });
 
         var facialHairColor = _markingManager.MustMatchSkin(profile.Species, HumanoidVisualLayers.FacialHair, out var facialHairAlpha, _prototypeManager)
             ? profile.Appearance.SkinColor.WithAlpha(facialHairAlpha)
             : profile.Appearance.FacialHairColor;
+        var secondaryFacialHairColor = _markingManager.MustMatchSkin(profile.Species, HumanoidVisualLayers.FacialHair, out _, _prototypeManager)
+            ? profile.Appearance.SkinColor.WithAlpha(facialHairAlpha)
+            : profile.Appearance.SecondaryFacialHairColor;
         var facialHair = new Marking(profile.Appearance.FacialHairStyleId,
-            new[] { facialHairColor });
+            new[] { facialHairColor, secondaryFacialHairColor });
 
         if (_markingManager.CanBeApplied(profile.Species, profile.Sex, hair, _prototypeManager))
         {
@@ -400,7 +406,18 @@ public sealed class HumanoidAppearanceSystem : SharedHumanoidAppearanceSystem
             // Okay so if the marking prototype is modified but we load old marking data this may no longer be valid
             // and we need to check the index is correct.
             // So if that happens just default to white?
-            if (colors != null && j < colors.Count)
+            if (colors != null && colors.Count >= 2 &&
+                (markingPrototype.BodyPart == HumanoidVisualLayers.Hair ||
+                 markingPrototype.BodyPart == HumanoidVisualLayers.FacialHair))
+            {
+                // Blend hair/facial hair colors across sprite layers
+                var finalColor = BlendHairColors(colors[0], colors[1], j, markingPrototype.Sprites.Count);
+
+                if (hasInfo && info.Color != null)
+                    finalColor = Color.InterpolateBetween(finalColor, info.Color.Value, 0.5f);
+                _sprite.LayerSetColor((entity.Owner, sprite), layerId, finalColor);
+            }
+            else if (colors != null && j < colors.Count)
             {
                 // Goob edit start
                 var color = colors[j];
@@ -422,6 +439,26 @@ public sealed class HumanoidAppearanceSystem : SharedHumanoidAppearanceSystem
             if (humanoid.MarkingsDisplacement.TryGetValue(markingPrototype.BodyPart, out var displacementData) && markingPrototype.CanBeDisplaced)
                 _displacement.TryAddDisplacement(displacementData, (entity.Owner, sprite), targetLayer + j + 1, layerId, out _);
         }
+    }
+
+    /// <summary>
+    /// <summary>
+    ///     Blends two hair/facial hair colors across the sprite layers for a gradient effect.
+    ///     Creates a smooth transition from color1 to color2 across all sprite layers.
+    ///     For single-sprite markings, applies a visible gradient blend using HSV interpolation.
+    /// </summary>
+    private Color BlendHairColors(Color color1, Color color2, int spriteIndex, int totalSprites)
+    {
+        if (totalSprites <= 1)
+        {
+            // For single-sprite markings, blend the colors using HSV for better gradient appearance
+            // This creates a more natural-looking gradient than simple RGB interpolation
+            return Color.InterpolateBetween(color1, color2, 0.5f);
+        }
+
+        // Calculate blend factor: 0.0 at first layer, 1.0 at last layer
+        float blendFactor = (float)spriteIndex / (totalSprites - 1);
+        return Color.InterpolateBetween(color1, color2, blendFactor);
     }
 
     public override void SetSkinColor(EntityUid uid, Color skinColor, bool sync = true, bool verify = true, HumanoidAppearanceComponent? humanoid = null)

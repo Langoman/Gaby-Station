@@ -167,6 +167,19 @@ public sealed partial class SingleMarkingPicker : BoxContainer
         _species = species;
         _totalPoints = totalPoints;
 
+        // Automatically expand any 1-color hair/facial hair to 2-color for blending support
+        if ((Category == MarkingCategories.Hair || Category == MarkingCategories.FacialHair) && _markings != null)
+        {
+            for (var i = 0; i < _markings.Count; i++)
+            {
+                if (_markings[i].MarkingColors.Count == 1)
+                {
+                    _markings[i] = new Marking(_markings[i].MarkingId,
+                        new[] { _markings[i].MarkingColors[0], _markings[i].MarkingColors[0] });
+                }
+            }
+        }
+
         //Corvax-Wega-Genetics-Start
         if (IgnoreSpecies)
         {
@@ -247,7 +260,18 @@ public sealed partial class SingleMarkingPicker : BoxContainer
         ColorSelectorContainer.DisposeAllChildren();
         ColorSelectorContainer.RemoveAllChildren();
 
-        if (marking.MarkingColors.Count != proto.Sprites.Count)
+        // For hair and facial hair, ensure we have at least 2 colors for blending
+        if ((Category == MarkingCategories.Hair || Category == MarkingCategories.FacialHair)
+            && marking.MarkingColors.Count == 1)
+        {
+            // Duplicate the single color to create a primary and secondary color
+            marking = new Marking(marking.MarkingId, new[] { marking.MarkingColors[0], marking.MarkingColors[0] });
+            _markings[Slot] = marking;
+        }
+        // For hair and facial hair with dual-color blending, preserve the 2 colors
+        // Otherwise match the sprite count
+        else if ((Category != MarkingCategories.Hair && Category != MarkingCategories.FacialHair)
+                 && marking.MarkingColors.Count != proto.Sprites.Count)
         {
             marking = new Marking(marking.MarkingId, proto.Sprites.Count);
         }

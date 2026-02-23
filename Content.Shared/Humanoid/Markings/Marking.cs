@@ -92,6 +92,20 @@ namespace Content.Shared.Humanoid.Markings
             }
         }
 
+        /// <summary>
+        ///     Ensures this marking has at least the specified number of colors.
+        ///     Used to expand hair/facial hair to support dual-color blending.
+        /// </summary>
+        public void EnsureColorCount(int targetCount)
+        {
+            while (_markingColors.Count < targetCount)
+            {
+                // Pad with last known color or white
+                var padColor = _markingColors.Count > 0 ? _markingColors[_markingColors.Count - 1] : Color.White;
+                _markingColors.Add(padColor);
+            }
+        }
+
         public int CompareTo(Marking? marking)
         {
             if (marking == null)
